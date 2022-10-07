@@ -1,0 +1,6 @@
+tmin, Minimum temperature (deg C), Annual Mean Min. Temperature
+tmax, Maximum temperature (deg C), Annual Mean Max. Temperature
+tmean, Mean temperature (deg C), Annual Mean Temperature
+vpdmax, Maximum vapor pressure deficit (hPa), Annual Mean VPD Max.
+vpdmin, Minimum vapor pressure deficit (hPa), Annual Mean VPD Min.
+ppt, Precipitation (mm per year), Total Annual Precipitation 

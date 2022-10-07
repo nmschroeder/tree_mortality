@@ -1,0 +1,24 @@
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+Loading required package: sp
+
+Attaching package: ‘raster’
+
+The following object is masked from ‘package:dplyr’:
+
+    select
+
+Linking to GEOS 3.8.1, GDAL 3.1.0, PROJ 6.3.2; sf_use_s2() is TRUE
+Loading required namespace: rgeos
+Warning message:
+In rm(shps_buffer, shps_buffer_agg, shps_buff_disagg) :
+  object 'shps_buff_disagg' not found

@@ -2,7 +2,7 @@ library(dplyr)
 library(sf)
 
 # Read in the manually labeled training data
-shps <- read_sf("data/trees_2017_training_filtered_labeled.shp")
+shps <- read_sf("data/training/trees_2017_training_filtered_labeled.shp")
 str(shps)
 
 # Filter out any trees that could not be labeled (live = -1)

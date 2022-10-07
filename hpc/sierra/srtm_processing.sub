@@ -1,0 +1,29 @@
+#!/bin/bash
+
+#SBATCH --job-name=srtm   ## name of the job.
+#SBATCH -A JRANDERS_LAB        ## account to charge
+#SBATCH -p hugemem             ## partition/queue name
+#SBATCH --error=error_%A_%a.txt ## error log file name: %A is job id, %a is array task id
+#SBATCH --output=out_%A_%a.txt  ## output filename
+#SBATCH --nodes=1               ## number of nodes the job will use
+#SBATCH --ntasks=1              ## number of processes to launch for each array iterration
+#SBATCH --cpus-per-task=4       ## number of cores the job needs
+#SBATCH --time=24:00:00          ## time limit for each array task
+#SBATCH --array=1           ## can add a range of values here like 1-25, etc., for lines 1-25 of the input file
+                                ## $SLURM_ARRAY_TASK_ID takes values from 1 to 100 inclusive
+
+# Use $SLURM_ARRAY_TASK_ID to specify the filename
+
+module purge
+module load udunits/2.2.26/intel.2020u1
+module load gdal/3.1.0
+module load geos/3.8.1
+module load foundation
+module load R/3.6.2
+module load openmpi/4.0.3/gcc.8.4.0
+
+# Pass line #i to a R script 
+srun Rscript ./srtm_processing.R
+
+
+
