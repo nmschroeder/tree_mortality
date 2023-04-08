@@ -1,0 +1,375 @@
+---
+title: "Drawing polygons around trees"
+author: "Nicole Hemming-Schroeder"
+date: "2023-02-28"
+output: html_document
+---
+
+The objective of this Markdown file is to clarify the tree identification and segmentation algorithm described in Hemming-Schroeder et al. 2013 (in revision at JGR Biogeosciences). This script looks at small window of data in the Sierra Nevada ecoregion of California east of Fresno. 
+
+The coordinate reference system in this example is UTM Zone 11, WGS 84 or EPSG coordinate reference system 32611. This is measured in meters rather than degrees.
+
+Exercises are included throughout the Rmarkdown for readers who would like a more interactive experience. Possible solutions to questions in the file are at the end.
+
+While Windows has the capability to render the 3D plots, Macs require XQuartz to be downloaded. You can download and install XQuartz on a Mac at https://www.xquartz.org and then log out and back in to your computer to complete the installation. If you have trouble using XQuartz on a Mac with R 4.2.1, you might try R 4.1.3 instead.
+
+## Installing R libraries
+install.packages() is used to install R libraries. To install a single package like dplyr, you write the following into the console
+install.packages("dplyr")
+
+To install all the packages used here, you can use a column vector
+install.packages(c("dplyr", "lidR", "sf", "concaveman", "raster", "ggplot2", "colorspace"))
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+# These packages are helpful for ...
+library(dplyr)                 # wrangling data
+library(lidR)                  # reading in light detection and ranging (lidar) data
+library(sf)                    # working with spatial features like polygons and points
+library(concaveman)            # drawing concave polygons around a set of points
+library(raster)                # working with raster data
+library(ggplot2)               # making plots
+library(colorspace)            # using color maps
+```
+
+## Looking at LiDAR data
+
+Update the working directory to the location where you saved this R markdown file.
+
+Create a directory for NEON data and download the following LiDAR tiles for the Soaproot Saddle site (SOAP) from the NEON data portal (https://data.neonscience.org/data-products/DP1.30003.001):
+[1] "NEON/lidar/2013/SOAP/NEON_D17_SOAP_DP1_297000_4100000_classified_point_cloud.laz"          
+[2] "NEON/lidar/2017/SOAP/NEON_D17_SOAP_DP1_297000_4100000_classified_point_cloud.laz"          
+[3] "NEON/lidar/2018/SOAP/NEON_D17_SOAP_DP1_297000_4100000_classified_point_cloud.laz"          
+[4] "NEON/lidar/2019/SOAP/NEON_D17_SOAP_DP1_297000_4100000_classified_point_cloud_colorized.laz"
+[5] "NEON/lidar/2021/SOAP/NEON_D17_SOAP_DP1_297000_4100000_classified_point_cloud_colorized.laz"
+
+Note that the file names do not include the data year, so create a sub-directory for each year to avoid writing over files or losing track of the year.
+
+```{r}
+# Change this working directory to where you saved this file
+wd <- "~/Documents/R/trees/"
+setwd(wd)
+
+
+lidar_dir <- "NEON/lidar"
+```
+
+## Selecting a small region within the lidar tile
+
+```{r}
+# Here is an example set of boundaries for a 96 meter by 96 meter window of data with a 24-meter buffer.
+site <- "SOAP"   # This stands for Soaproot Saddle, a NEON site in California's Sierra National Forest
+x_lb <- 297021.5 # Easting  (meters)
+x_ub <- 297165.5 # Easting  (meters)
+y_lb <- 4100108  # Northing (meters)
+y_ub <- 4100252  # Northing (meters)
+```
+
+## List files in a folder
+
+If you have many files of the same type in a folder, you can list and loop through them in a for-loop in your workflow. In this example, we'll look through the list without a loop. Compare the output of this file to the PDF on Github. The five NEON files should print below.
+
+```{r}
+print("Collecting lidar files")
+# Collect all lidar files in the data directory with their full file names that have 
+# _classified_point_cloud in their name and end in .laz
+fnames_laz <- list.files(lidar_dir, pattern = glob2rx(paste0("*",site,"*_classified_point_cloud*.laz")), 
+                          recursive = TRUE, full.names = TRUE)
+
+print("Lidar files:")
+print(fnames_laz)
+
+```
+## Reading in lidar files
+You can use readLAS, but readLAScatalog can read in an abbreviated amount of data from a whole list of files (e.g. all lidar files for one site) without taxing your computer's memory. You can use that to get a broad sense of the catalog and the clip a small amount of lidar data from the catalog in more detail later.
+
+```{r}
+# Read in each file as a catalog; you can read in a list of files this way, but here we just read in one for each year
+L_catalog_2013 <- readLAScatalog(fnames_laz[1])
+L_catalog_2017 <- readLAScatalog(fnames_laz[2])
+L_catalog_2018 <- readLAScatalog(fnames_laz[3])
+L_catalog_2019 <- readLAScatalog(fnames_laz[4])
+L_catalog_2021 <- readLAScatalog(fnames_laz[5])
+```
+Question 1: How does the lidar file from 2021 compare to the one from 2013?
+
+```{r}
+print("Lidar from 2013")
+L_catalog_2013
+
+print("Lidar from 2021")
+L_catalog_2021
+
+```
+## Clipping lidar data from the whole catalog
+
+Let's use 2017 data and clip the dataset to our smaller window using the variables from earlier. 
+
+The output shows you where the window is within the larger data tile.
+```{r}
+las_2017 <- clip_rectangle(L_catalog_2017, x_lb, y_lb, x_ub, y_ub, filter = "-drop_z_below 0")
+```
+## Let's look at the trees in 2017
+
+This cell doesn't seem to show up in the knitted Rmarkdown file, but you can see a 3D rendering of the lidar point cloud in Windows or using XQuartz on a Mac. The viewer opens up as a separate window.
+
+Note: If you're having trouble getting XQuartz to work using R version 4.2.1, try using R 4.1.3 instead.
+
+```{r}
+plot(las_2017)
+
+```
+
+## From elevation measurements to tree heights
+
+These next few functions are used to obtain a raster estimating the elevation of the topography. This is then used to find the tree heights. 
+
+```{r}
+# Let's use 1-meter by 1-meter resolution
+r<-1
+
+# Use the lidar data to make an estimate of the ground with resolution r
+las_gt_2017 <- grid_terrain(las_2017, r, knnidw())
+
+# Use the ground estimate to obtain heights above the ground
+las_corrected_2017 <- normalize_height(las_2017, algorithm  = las_gt_2017, na.rm = TRUE)
+plot(las_corrected_2017)
+
+# Make a canopy height model of the lidar data
+chm_2017 <- grid_canopy(las_corrected_2017, res = r, pitfree(c(0,2,5,10,15), c(0, 1.5)))
+plot(chm_2017)
+```
+
+## Find tree tops within the lidar point cloud
+
+While we can see the separate trees, we need an algorithm to find them in R. The lidR package offers several options to use within find_trees. The documentation suggests having the search radius be larger for taller trees. I edited the example function f from the documentation based on some trial and error with sample trees in this study region. Since my goal was to obtain polygons that were tight around the tree crowns and did not include ground returns, I chose parameters that leave out some of the edges of the trees.
+
+Exercise 1: change the parameters in the find_trees function and run the rest of the code chunks to see how your changes effect the polygons drawn around the trees. For example, how does a large fixed radius like f2 effect the result? How about a small fixed radius like 3 meters?
+
+```{r}
+# Smooth and filter the canopy height model; this goes through with a 3x3 matrix through the whole raster and takes the median
+# values that it finds within the 3x3 matrix to smooth the values
+ker <- matrix(rep(1, 9), ncol = 3)
+chm_smooth <- focal(chm_2017, ker, fun = median, na.rm = TRUE)
+  
+# This is a function to make the search radius for additional lidar points belonging to a tree larger for taller trees  
+f <- function(z){
+  # The search radius, r, will be 1/8 of the height of the tree, but...
+  r <- (1/8)*z
+  # We'll go no smaller than 4 meters 
+  r[r<4] <- 4
+  # And no larger than 10 meters
+  r[r>10] <- 10
+  return(r)
+}
+
+# Alternate function you could use for find_trees(chm_smooth, lmf(f2)) to hold the search radius constant
+f2 <- 10 # meters
+  
+ttops <- find_trees(chm_smooth, lmf(f))
+
+```
+
+
+## Check the tree tops plotted with the lidar point cloud
+
+Question 2: Why might the tree tops we located be lower than the tree tops we see in the lidar point cloud?
+
+```{r}
+x <- plot(las_corrected_2017)
+add_treetops3d(x, ttops)
+```
+
+
+## Segmenting the lidar point cloud into individual trees
+
+```{r}
+# Each of the values in th_tree, th_seed, th_cr, and max_cr are parameters within the dalponte2016 function that you can change
+# to try to improve how well the points are assigned to different trees
+las_trees_2017 <- segment_trees(las_corrected_2017, dalponte2016(chm = chm_2017, 
+                                                                 treetops = ttops, th_tree = 3, th_seed = 0.75, th_cr = 0.85, max_cr = 10))
+
+# You can check how the parameters did here:
+plot(las_trees_2017, color = 'treeID')
+```
+
+## Finding the coordinates of each lidar point
+
+Here is the data frame associated with the lidar object. The values X, Y, and Z are the spatial coordinates of each point. Each point gets a treeID which tells you which tree it belongs to (if any).
+
+Question 3: What types of points would not get assigned to a tree?
+
+```{r}
+print("Data stucture")
+str(las_trees_2017@data)
+
+print("Unique tree IDs")
+unique(las_trees_2017@data$treeID) %>% sort()
+```
+## Looking at a single tree
+
+Exercise 2: Change the treeID to another number (e.g. treeID==5) in the code below to focus on another tree. Repeat to look at other trees.
+
+Question 4: What is the maximum tree number we could use?
+
+```{r}
+# Make a copy of the las_trees_2017 lidar object
+las_tree <- las_trees_2017
+
+# Replace the data portion with only returns from a treeID of your choice
+las_tree@data <- dplyr::filter(las_trees_2017@data, treeID==20)
+
+plot(las_tree)
+
+```
+
+## Drawing a crown area polygon
+
+Let's draw a polygon around this tree's x and y coordinates to describe the crown.
+
+Exercise 3: Try changing the concavity to a smaller number. What happens?
+```{r}
+
+# Convert the x and y data columns into spatial points using the sf package
+tree_df <- st_as_sf(las_tree@data, coords = c("X", "Y"), crs = 32611, agr = "constant")
+
+
+# Choose how concave or smooth you're polygon will be. Smaller numbers are more concave and detailed in how they are
+# drawn around the data points you have. Larger numbers are more smooth.
+concavity <- 5
+
+# Apply concaveman to draw a concave polygon around those coordinates
+pgon <- concaveman(tree_df, concavity)
+
+# Take a quick look at the shape
+plot(pgon)
+
+```
+## How does it look on the canopy height model map?
+
+```{r}
+# ggplot2 needs the raster data converted to a spatial points data frame before plotting
+chm_df <- chm_2017 %>% rasterToPoints(spatial=TRUE) %>% data.frame()
+
+print("Converted data format for plotting")
+# Z are the canopy heights, so we'll select those for the filled colormap
+str(chm_df)
+
+# Plot the raster data
+ggplot() + geom_raster(data = chm_df, mapping = aes(x=x, y=y, fill=Z)) + 
+  geom_sf(data = pgon, fill = NA) + 
+  scale_fill_continuous_sequential(palette = 'Viridis')
+```
+
+## Colormaps within the colorspace library
+
+You can pick other colors for your color map. Some colormaps like viridis, inferno, and magma go from light to dark in addition to changing color to be accessible for folks who are colorblind. 
+
+For the colorspace library
+- Sequential colormaps go with the function scale_fill_continuous_sequential
+- Diverging colormaps go with scale_fill_continuous_diverging, etc.
+
+Exercise 4: Choose another colormap for plotting the canopy heights above.
+
+```{r}
+hcl_palettes(plot = TRUE)
+```
+
+## Mapping all the trees
+
+This code maps all of the trees for our 2017 las file we clipped. I commented the code in case folks are interested, but the main point here is the plot that it creates. Changing the tree_tops parameters in the code above will effect the outcome. 
+
+```{r}
+
+# Function file for drawing a polygon around x,y-coordinates for each group in a grouped dataframe
+tree_polygons <- function(tree_df, concavity){
+  # This function goes through one tree for a given year at a time
+  tree_df <- st_as_sf(tree_df, coords = c("X", "Y"), crs = 32611, agr = "constant")
+  pgon <- concaveman(tree_df, concavity)
+  # Find the maximum for this year
+  idx <- which.max(tree_df$Z)
+  return(mutate(pgon, 
+                treeID = tree_df$treeID[1], 
+                x = tree_df$X[idx], 
+                y = tree_df$Y[idx],
+                zmax = tree_df$Z[idx],
+                las_year = tree_df$las_year[1]))
+}
+
+
+# Collect the coordinates for the identified tree tops
+xy <- coordinates(ttops)
+x <- xy[,1]
+y <- xy[,2]
+
+# Filter them to remove any trees that fall within the 24-meter buffer of the 96 meter by 96 meter window
+# we are looking at. This helps to avoid drawing polygons around partial trees along the edges.
+bff <- 24
+idx <- which(x > (x_lb + bff) & x <= (x_ub - bff) & 
+               y > (y_lb + bff) & y <= (y_ub - bff))
+treeIDs <- ttops$treeID[idx]
+
+print('ttops_df')
+ttops_df <- cbind(data.frame(ttops@data), data.frame(coordinates(ttops)))
+str(ttops_df)
+
+# Segment the trees using the Dalponte et al 2016 method
+print('segment trees')
+las_trees_2017 <- segment_trees(las_corrected_2017, 
+                                dalponte2016(chm = chm_2017, treetops = ttops, th_tree = 3, 
+                                             th_seed = 0.75, th_cr = 0.85, max_cr = 10))
+tree_data <- las_trees_2017@data
+print("2017 tree_data structure")
+str(tree_data)
+
+# Add the year for the data (more important when you're processing multiple years at once)
+las_year <- rep(2017, times	= dim(tree_data)[1])
+tree_data <- cbind.data.frame(tree_data, las_year)
+
+# Select the coordinates, treeID, and year. Drop any NA values.
+tree_data <- dplyr::select(tree_data, X, Y, Z, treeID, las_year) %>% dplyr::filter(!is.na(treeID)) %>% as.data.frame()
+
+# Group the data frame by treeID and year, and then apply the polygon function to each treeID for each year (in this case,
+# we're only going through one year)
+tree_list <- group_by(tree_data, treeID, las_year) %>% dplyr::group_map(~tree_polygons(.x,concavity = 5), .keep = TRUE)
+
+# Use do.call to put all the little resulting data frames together from the previous line of the code
+trees <- do.call(rbind.data.frame, tree_list)
+
+# R doesn't like to plot polygons with fewer than three points, so create a function to check for those. 
+point_check <- function(pgons){
+  # How many polygons are  there?
+  N <- length(pgons)
+  # Intialize a vector to store the number of coordinates for each polygon
+  n_points <- vector(length = N)
+  for (i in 1:N){
+    # Pull out polygon i
+    crds <- st_coordinates(pgons[i])
+    # Store the number of rows of coordinates given (i.e. the number of points)
+    n_points[i] <- dim(crds)[1]
+  }
+  # Return a logical vector that tells you whether there are at least 4 points in the polygon or not
+  return(n_points>=4)
+}
+
+# The result for idx will be a true/false telling us whether or not there are 4 points in each polygon
+idx <- point_check(trees$polygons)
+
+# For plotting, we only want the polygons with at least four points
+trees_plot <- trees[idx,]
+
+# Plot it
+ggplot() + geom_raster(data = chm_df, mapping = aes(x=x, y=y, fill=Z)) + 
+  # You can change the color of the polygons below. The website http://www.stat.columbia.edu/~tzheng/files/Rcolor.pdf
+  # has a list of the different color names you can use in R.
+  geom_sf(data = trees_plot$polygons, fill = NA, color = 'white') + 
+  # Here, we're reversing the inferno color palette so that taller trees are darker in color
+  scale_fill_continuous_sequential(palette = 'Inferno', rev = TRUE)
+```
+
+## Possible solutions to questions
+
+Q1: There are more lidar points per square meter in 2021 than 2013.
+Q2: We smoothed the canopy height model by using a 3x3 moving window which assigned the center value the median value of the nine values within the window. This can be helpful for removing noisy returns but might cause the estimated tree height to be lower than what you see in the lidar cloud.
+Q3: Ground returns would ideally not get assigned to trees. Lidar points that appear to be part of a tree might still not get assigned to one based on the tree segmentation criteria. 
+Q4: 108 is the highest tree number within this dataframe

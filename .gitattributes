@@ -1,0 +1,15 @@
+/README.html filter=lfs diff=lfs merge=lfs -text
+/figures/Figure_1_study_site.pdf filter=lfs diff=lfs merge=lfs -text
+/figures/Figure_3_rgreen_ndvi_panel.eps filter=lfs diff=lfs merge=lfs -text
+/figures/Figure_6_mortality_fraction.pdf filter=lfs diff=lfs merge=lfs -text
+/figures/Figure_9_mortality_panel.pdf filter=lfs diff=lfs merge=lfs -text
+/figures/Figure_S10_lidar_point_cloud.pdf filter=lfs diff=lfs merge=lfs -text
+/figures/Figure_S11_trees_per_pixel_panel.pdf filter=lfs diff=lfs merge=lfs -text
+/figures/Figure_S3_example_tree_crowns.pdf filter=lfs diff=lfs merge=lfs -text
+/figures/Figure_S4_soap_grid.pdf filter=lfs diff=lfs merge=lfs -text
+/figures/Figure_S5_teak_grid.pdf filter=lfs diff=lfs merge=lfs -text
+/figures/Figure_S6_error_analysis.pdf filter=lfs diff=lfs merge=lfs -text
+/figures/Figure_S7_fire_associated_mortality.pdf filter=lfs diff=lfs merge=lfs -text
+/hpc/sierra/align_trees/align_trees_indices.csv filter=lfs diff=lfs merge=lfs -text
+/hpc/sierra/align_trees/ensemble_inputs.txt filter=lfs diff=lfs merge=lfs -text
+/tree_polygon_vignette.pdf filter=lfs diff=lfs merge=lfs -text

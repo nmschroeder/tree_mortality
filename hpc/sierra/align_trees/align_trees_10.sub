@@ -1,0 +1,22 @@
+#!/bin/bash
+
+#SBATCH --job-name=trees10      ## name of the job.
+#SBATCH -A <ACCOUNT_NAME>       ## account to charge
+#SBATCH -p <partition_name>     ## partition/queue name
+#SBATCH --error=error_%A_%a.txt ## error log file name: %A is job id, %a is array task id
+#SBATCH --output=out_%A_%a.txt  ## output filename
+#SBATCH --nodes=1               ## number of nodes the job will use
+#SBATCH --ntasks=1              ## number of processes to launch for each array iterration
+#SBATCH --cpus-per-task=1       ## number of cores the job needs
+#SBATCH --time=1:00:00          ## time limit for each array task
+
+module purge
+module load R/4.1.2
+module load udunits/2.2.28/gcc.11.2.0
+module load gdal/3.4.1
+
+# Run R script 
+srun Rscript ./align_trees_10_intersection_locations.R
+
+
+
