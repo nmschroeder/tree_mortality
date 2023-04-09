@@ -3,7 +3,7 @@ Supporting scripts and datasets for Hemming-Schroeder et al. (2023), *Journal of
 
 ## analysis directory
 
-Scripts for figures and analysis discussed in the paper
+Scripts for figures and analysis discussed in our study
 
 ## data directory
 
