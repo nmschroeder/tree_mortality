@@ -49,15 +49,20 @@ Data created using the methods in our study
 
 ### data/intermediate
 
-* data/study_region
+* data/intermediate/study_region
     + Raster and shapefiles to describe the outlines of the Soaproot Saddle and Lower Teakettle lidar data intersection for the years 2013, 2017, 2018, 2019, and 2021
     
-* data/index_parameters
+* data/intermediate/index_parameters
     + Results from the grid parameter searches to find the best vegetation indices using the training and validation datasets
 
 ### data/training
 
-Shapefiles of tree crown perimeters that were labeled by hand as dead or alive in 2017 in QGIS using RGB imagery derived from NEON hyperspectral data
+* data/training/training_sample_sites.shp
+    + A shapefile for the 30-meter Landsat pixels used to hand-label trees for the training data set
+
+* data/training/trees_2017_training_filtered_labeled.shp
+    + Shapefiles of tree crown perimeters that were labeled by hand as dead or alive in 2017 in QGIS using RGB imagery derived from NEON hyperspectral data
+    + This data set was created before updates were made to the algorithm in hpc/sierra/align_trees, so the treeID identifier no longer matches the data sets in data/deliverables/vector
 
 ## figures directory
 
