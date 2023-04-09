@@ -22,9 +22,13 @@ Data created using the methods in our study
         - the coordinate reference system is European Petroleum Survey Group (EPSG) 32611.
 
     + trees_YYYY_ndvi.shp
+        - Not all the columns below are present in each data set
         - treeID is the unique tree ID for each tree in the study
-        - x is the easting value in meters 
-        - y is the northing value in meters
+        - x is the Easting value in meters 
+        - y is the Northing value in meters
+        - xlasYYYY is the Easting value in meters from the lidar file of year YYYY
+        - ylasYYYY is the Northing value in meters from the lidar file of year YYYY
+        - mort_area notes whether or not the tree is dead in a given year as classified by change in area where 1 indicates dead by area and 0 indicates not dead by area (may not be the first year the tree is classified as dead)
         - area2013 is the crown area in 2013 in square meters
         - sites is the site label (SOAP or TEAK)
         - poly_area is the crown area in square meters for the year given by YYYY in the filename
