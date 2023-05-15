@@ -39,7 +39,7 @@ add_data <- dplyr::filter(add_data, treeID %in% fdata$treeID)
 fdata <- right_join(fdata, add_data, by = "treeID")
 
 # Plot the distributions of mean relative greenness for live and dead trees
-p1 <- ggplot(data = fdata) + geom_density(mapping = aes(x = mean_green, fill = live), alpha = 0.5) + xlim(c(0.25, 0.55)) + labs(x = "Mean relative greenness", y = "Probability Density Function") + 
+p1 <- ggplot(data = fdata) + geom_density(mapping = aes(x = mean_green, fill = live), alpha = 0.5) + xlim(c(0.25, 0.55)) + labs(x = "Mean relative greenness", y = "Relative Frequency Distribution") + 
   scale_fill_manual(name = "", labels = c("0"="Dead", "1"="Live"), values = c("0" = "khaki1", "1" = "Dodgerblue4")) +
   ggtitle("a. Relative Greenness") +
   theme(legend.direction="horizontal")
@@ -52,7 +52,7 @@ p1 <- p1 + theme(legend.position = "none")
 
 # Plot the distributions of mean NDVI for live and dead trees
 p2 <- ggplot(data = fdata) + geom_density(mapping = aes(x = mean_ndvi, fill = live), alpha = 0.5) + xlim(c(0, 1)) +
-  labs(x = "Mean NDVI", y = "Probability Density Function") + 
+  labs(x = "Mean NDVI", y = "Relative Frequency Distribution") + 
   scale_fill_manual(name = "", labels = c("0"="Dead", "1"="Live"), values = c("0" = "khaki1", "1" = "Dodgerblue4"))+
   ggtitle("b. NDVI") +
   theme(legend.position="none")

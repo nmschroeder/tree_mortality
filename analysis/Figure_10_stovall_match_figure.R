@@ -124,7 +124,7 @@ p01 <- ggplot() +
   geom_text(data = data.frame(x=xm, y = 5.5, label = c("99%")), mapping = aes(x = x, y = y, label = label)) +
   geom_segment(aes(x = xm-0.05, y = 5.5, xend = xx[1], yend = 5.5), arrow = arrow(length = unit(0.2, "cm"))) +
   geom_segment(aes(x = xm+0.05, y = 5.5, xend = xx[2], yend = 5.5), arrow = arrow(length = unit(0.2, "cm"))) +
-  geom_density(data = stovall_intersection[idx2,], mapping = aes(x = mean_ndvi), fill = "lightgray") + xlim(c(0.1, 1)) + ylim(c(0, 5.8)) + labs(x = "Mean NDVI", y = "Probability Density Function") + 
+  geom_density(data = stovall_intersection[idx2,], mapping = aes(x = mean_ndvi), fill = "lightgray") + xlim(c(0.1, 1)) + ylim(c(0, 5.8)) + labs(x = "Mean NDVI", y = "Relative Frequency Distribution") + 
   ggtitle("a. Classified as live in this study but dead in Stovall et al.") +
   theme(legend.position="none", plot.title = element_text(size = 10))
 
@@ -133,7 +133,7 @@ p02 <- ggplot() +
   geom_density(data = stovall_intersection[!idx2,], mapping = aes(x = mean_ndvi, fill = live), alpha = 0.5) + xlim(c(0.1, 1)) + ylim(c(0, 5.8)) + 
   geom_vline(xintercept = xx[1]) +
   geom_vline(xintercept = xx[2]) +
-  labs(x = "Mean NDVI", y = "Probability Density Function") +
+  labs(x = "Mean NDVI", y = "Relative Frequency Distribution") +
   scale_fill_manual(name = "", labels = c("0"="Dead", "1"="Live"), values = c("0" = "khaki1", "1" = "Dodgerblue4")) +
   ggtitle("b. Classified the same in both studies") +
   geom_text(data = data.frame(x=c(0.4, 0.75), y=c(1.5, 1.5), label = c("Dead", "Live")), mapping = aes(x, y, label = label)) +
